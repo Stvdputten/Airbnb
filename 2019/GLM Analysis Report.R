@@ -113,5 +113,5 @@ i = i + 1
 
 }
 # recode variables for analysis 
-subs[,38] = as.numeric(subs[,38])
+subs[,38]= as.numeric(gsub("\\$", "", subs[,38]))
 
