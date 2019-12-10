@@ -16,6 +16,8 @@ subset$security_deposit <- as.numeric(gsub('\\$', '', subset$security_deposit))
 subset$cleaning_fee <- as.numeric(gsub('\\$', '', subset$cleaning_fee))
 View(subset)
 
+
+
 listings <- read_csv('2019/listings.csv')
 price <- as.numeric(gsub('\\$', '', listings$price))
 subset$price <- price
@@ -52,5 +54,15 @@ head(subset)
 subset
 # Saving variable ---------------------------------------------------------
 
-
 write_csv(subset, '2019/subset.csv')
+
+lmo <- lm(price ~ host_since + host_response_time + host_neighbourhood + host_has_profile_pic +
+            host_identity_verified + street + neighbourhood_cleansed + property_type + 
+            room_type + accommodates + bathrooms + beds + bed_type + security_deposit + 
+            cleaning_fee + guests_included + number_of_reviews + number_of_reviews_ltm +
+            review_scores_rating + review_scores_accuracy + review_scores_cleanliness + 
+            review_scores_checkin + review_scores_communication + review_scores_location + 
+            review_scores_value + cancellation_policy + reviews_per_month, data=subset)
+
+plot(lmo)
+
