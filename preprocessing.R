@@ -44,11 +44,16 @@ levels(as.factor(subset$host_neighbourhood))
 subset$host_neighbourhood
 # Removed (because of: ) --------------------------------------------------
 
-# Market remove, because of unbalacned and weirdly parsed data (mostly amsterdam)
+# Market remove, because of unbalanced and weirdly parsed data (mostly amsterdam)
 View(subset)
 colnames(subset)
 subset <- subset %>% 
   select(-'state')
+
+#street remove, [,6] because of mostly the same data, 
+#which was not the street (Amsterdam, Noord-Holland, Netherlands)
+subset = as.data.frame(subset[c(1:5, 7:29)])
+
 
 head(subset)
 subset
@@ -57,7 +62,7 @@ subset
 write_csv(subset, '2019/subset.csv')
 
 lmo <- lm(price ~ host_since + host_response_time + host_neighbourhood + host_has_profile_pic +
-            host_identity_verified + street + neighbourhood_cleansed + property_type + 
+            host_identity_verified + neighbourhood_cleansed + property_type + 
             room_type + accommodates + bathrooms + beds + bed_type + security_deposit + 
             cleaning_fee + guests_included + number_of_reviews + number_of_reviews_ltm +
             review_scores_rating + review_scores_accuracy + review_scores_cleanliness + 
@@ -65,4 +70,5 @@ lmo <- lm(price ~ host_since + host_response_time + host_neighbourhood + host_ha
             review_scores_value + cancellation_policy + reviews_per_month, data=subset)
 
 plot(lmo)
+summary(lmo)
 
