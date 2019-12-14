@@ -48,8 +48,6 @@ bnb = read.csv(file="listings.csv", header=TRUE, sep=",")
 # host_picture_url[,31], neighbourhood_group_cleansed[,41]
 # juristiction_names[,96]
 
-
-
 # Included variables and or recoded variablesincluded in the analysis 
 # host_since[,23] recode from data to number of days
 # host_location[,24] recode categories into numbers
@@ -104,6 +102,7 @@ sum(is.na(bnb$square_feet)) # 19873 # high missing values
 
 subs = as.data.frame(bnb[c(23:24,26,32,36:40,42:48,52:58,64:66,83:84,87:93,
                            99,106,61)])
+
 # some preprocessing done in Precessing R file
 subset = read.csv('2019/subset.csv')
 
@@ -114,6 +113,12 @@ colnames(subset[,17]) # number_of_reviews
 
 # remove additonal variables
 subset = subset[-c(1,3,18,20:25)]
+colnames(subset)
+subset$accommodates = as.factor(subset$accommodates) # accomodates
+subset$bathrooms = as.factor(subset$bathrooms) # bathrooms
+subset$bedrooms = as.factor(subset$bedrooms) # bedrooms
+subset$beds = as.factor(subset$beds) # bedrooms
+subset$guests_included = as.factor(subset$guests_included) # guest included
 
 # some NA can be recoded into 0 e.g. security deposite & cancelation fee
 subset$security_deposit[is.na(subset$security_deposit)] = 0 
@@ -124,6 +129,7 @@ subset = na.omit(subset)
 # number of variables in dataset
 ncol(subset)
 colnames(subset)
+write.csv(subset, '2019/subset.csv')
 
 #########---------- Regression Assumptions -------------#########
 x = model.matrix(price ~ ., subset)
@@ -137,6 +143,28 @@ ggplot(l_m_res, aes(sample = l_m_res$`l_m$residuals`)) + stat_qq() +
   labs(x= "Theoretical Quantiles", y= "Error Quantiles") + stat_qq_line()
 
 plot(density(l_m_res$`l_m$residuals`))
+
+# examine normality of individual variables
+plot(density(log10(accommodates)))
+
+
+plot(density(subset[,12])) # deposit
+plot(density(subset[,13])) # cleaning fee
+plot(density(subset[,15])) # number of reviews
+plot(density(subset[,16])) # review score rating
+plot(density(subset[,18])) # review per month
+plot(density(subset[,19])) # price 
+
+# trial and error of transformations
+plot(density(log10(subset[,12]))) # deposit log transformation # no transformation normalizes
+plot(density(log10(subset[,13]))) # cleaning fee no transformation normalizes
+
+plot(density(log10(subset[,15]))) # log number of reviews  somewhat better 
+plot(density(subset[,16]^40)) # review score rating # no transformation normalized
+plot(density(log10(subset[,18]))) # review per month 
+plot(density(log10(subset[,19]))) # price # somehow better
+
+
 
 #----------------- Constant Errors ------------------#
 
@@ -205,6 +233,10 @@ crPlot(l_m, reviews_per_month)
 
 
 #----------------- Influential Cases ------------------#
+# variance Inflation Factor
+vif(l_m) # all vifs are small, no collinearity between predictors 
+# but potential to reduce predictors to an optimal subset of predictors 
+# using subset selection 
 
 #---------- Hat-Values 
 hat_v = hatvalues(l_m)
@@ -216,7 +248,6 @@ cooks.distance(l_m)
 
 # bubble plot of laverage vs discrepancy 
 ggplot(l_m, aes(x = hat_v, y = s_resid, size = cd)) +
-  geom_point(aes(color = )) + theme_light() +
+  geom_point(aes(color = "coral" )) + theme_light() +
   ggtitle("Leverage vs. Studentized residuals") +
   labs(x = "Leverage", y = "Studentized Residuals", size = "Cook's Distance")
-
