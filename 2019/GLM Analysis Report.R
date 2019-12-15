@@ -1,4 +1,5 @@
 ####----Libraries
+library(tidyverse)
 library(dplyr)
 library(ggplot2)
 library(car)
@@ -6,7 +7,7 @@ library(leaps)
 #########---------- Linear Models AIR BNB Analysis -------------#########
 
 
-bnb = read.csv(file="listings.csv", header=TRUE, sep=",")
+bnb = read.csv(file="2019/listings.csv", header=TRUE, sep=",")
 
 # data inlcudes 106 variables, this is obvisouly too many as such variable 
 # selection based on literature/similar case studies will be performed and
@@ -89,7 +90,7 @@ bnb = read.csv(file="listings.csv", header=TRUE, sep=",")
 # NA variables 
 sum(bnb$host_acceptance_rate == "N/A") # 20239
 sum(bnb$host_picture_url == "N/A") # 20239
-sum(bnb$host_total_listings_count == 0 )
+sum(bnb$host_total_listings_count == 0)
 sum(is.na(bnb$square_feet)) # 19873 # high missing values
 
 
@@ -104,15 +105,17 @@ subs = as.data.frame(bnb[c(23:24,26,32,36:40,42:48,52:58,64:66,83:84,87:93,
                            99,106,61)])
 
 # some preprocessing done in Precessing R file
-subset = read.csv('2019/subset.csv')
+subset = read.csv('2019/subset.csv') %>% 
+  select(-X)
 
 colnames(subset) # variables review scores can be removed except review score rating
 # and number of review scores review score 
-colnames(subset[,19]) # review scorerating
-colnames(subset[,17]) # number_of_reviews
+# colnames(subset[18]) # review scorerating
+# colnames(subset[17]) # number_of_reviews
 
 # remove additonal variables
-subset = subset[-c(1,3,18,20:25)]
+# subset = subset[-c(1,3,18,20:25)]
+head(as_tibble(subset))
 
 # some NA can be recoded into 0 e.g. security deposite & cancelation fee
 subset$security_deposit[is.na(subset$security_deposit)] = 0 
@@ -188,9 +191,12 @@ plot(subset$price,l_m_res$`l_m$residuals`, main="Residual plot")
 
 ggplot(subset,aes(subset$price,
                  l_m_res$`l_m$residuals`)) +
-  geom_point() + theme_light() + labs(x= "Agression", y= "Residuals") +
+  geom_point() + theme_light() + labs(x= "Price", y= "Residuals") +
   geom_smooth(method= "loess", se=FALSE) + ggtitle("Residual plot")
 
+ggplot(subset,aes(subset$price,
+                 l_m_res_2$`l_m_2$residuals`)) + geom_point() + theme_light() + labs(x= "Price", y= "Residuals") +
+  geom_smooth(method= "loess", se=FALSE) + ggtitle("Residual plot")
 # Rule of Thumb for non-constant error variance
 # if ratio of smallest vs biggest residual is bigger than 10 or 4 its a problem
 abs(max(l_m$residuals)) / abs(min(l_m$residuals)) < 10
