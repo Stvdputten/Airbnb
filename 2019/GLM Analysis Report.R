@@ -140,10 +140,11 @@ colnames(subset)
 
 #########---------- Regression Assumptions -------------#########
 x = model.matrix(price ~ ., subset)
+x_2 = subset 
+x_2 = as.data.frame(x_2)
+x_2 = model.matrix(price ~ ., x_2)
 l_m = lm(price ~ x, subset)
-l_m_2 = lm(log10(price) ~ x, subset)
-summary(l_m_2)
-
+l_m_2 = lm(log10(price + 1) ~ x, subset)
 #----------------- Nomal Errors ------------------#
 l_m_res = as.data.frame(l_m$residuals)
 l_m_res_2 = as.data.frame(l_m_2$residuals)
