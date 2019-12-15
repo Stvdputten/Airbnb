@@ -2,6 +2,7 @@
 library(dplyr)
 library(ggplot2)
 library(car)
+library(leaps)
 #########---------- Linear Models AIR BNB Analysis -------------#########
 
 
@@ -17,7 +18,6 @@ bnb = read.csv(file="listings.csv", header=TRUE, sep=",")
 # experiences_offred[,9], thumbnail_url[,16], medium_url[,17], picture_url[,18]
 # xl_picture_url[,19], host_id[,20], host_url[,21], host_name[,22]
 # # square_feet[,60], requieres_liscence[,95]
-
 
 
 # Removed to reduce dimensionality & unlikeliness of adding predictive power:
@@ -113,12 +113,6 @@ colnames(subset[,17]) # number_of_reviews
 
 # remove additonal variables
 subset = subset[-c(1,3,18,20:25)]
-colnames(subset)
-subset$accommodates = as.factor(subset$accommodates) # accomodates
-subset$bathrooms = as.factor(subset$bathrooms) # bathrooms
-subset$bedrooms = as.factor(subset$bedrooms) # bedrooms
-subset$beds = as.factor(subset$beds) # bedrooms
-subset$guests_included = as.factor(subset$guests_included) # guest included
 
 # some NA can be recoded into 0 e.g. security deposite & cancelation fee
 subset$security_deposit[is.na(subset$security_deposit)] = 0 
@@ -126,44 +120,65 @@ subset$cleaning_fee[is.na(subset$cleaning_fee)] = 0
 
 # remove NA rows 
 subset = na.omit(subset)
+# save subset as csv
+write.csv(subset, '2019/subset.csv')
+
+# change class of variables for analysis 
+subset$accommodates = as.factor(subset$accommodates) # accomodates
+subset$bathrooms = as.factor(subset$bathrooms) # bathrooms
+subset$bedrooms = as.factor(subset$bedrooms) # bedrooms
+subset$beds = as.factor(subset$beds) # bedrooms
+subset$guests_included = as.factor(subset$guests_included) # guest included
+
+
+
+
 # number of variables in dataset
 ncol(subset)
 colnames(subset)
-write.csv(subset, '2019/subset.csv')
+
 
 #########---------- Regression Assumptions -------------#########
 x = model.matrix(price ~ ., subset)
 l_m = lm(price ~ x, subset)
-summary(l_m)
+l_m_2 = lm(log10(price) ~ x, subset)
+summary(l_m_2)
+
 #----------------- Nomal Errors ------------------#
 l_m_res = as.data.frame(l_m$residuals)
+l_m_res_2 = as.data.frame(l_m_2$residuals)
 
+l_m_res = as.data.frame(l_m$residuals)
 ggplot(l_m_res, aes(sample = l_m_res$`l_m$residuals`)) + stat_qq() +
   ggtitle("Quantile comparison plot Errors") + theme_light() +
   labs(x= "Theoretical Quantiles", y= "Error Quantiles") + stat_qq_line()
 
+
+ggplot(l_m_res_2, aes(sample = l_m_res_2$`l_m_2$residuals`)) + stat_qq() +
+  ggtitle("Quantile comparison plot Errors") + theme_light() +
+  labs(x= "Theoretical Quantiles", y= "Error Quantiles") + stat_qq_line()
+
 plot(density(l_m_res$`l_m$residuals`))
+plot(density(l_m_res_2$`l_m_2$residuals`))
+
 
 # examine normality of individual variables
-plot(density(log10(accommodates)))
 
-
-plot(density(subset[,12])) # deposit
-plot(density(subset[,13])) # cleaning fee
-plot(density(subset[,15])) # number of reviews
-plot(density(subset[,16])) # review score rating
-plot(density(subset[,18])) # review per month
-plot(density(subset[,19])) # price 
-
-# trial and error of transformations
-plot(density(log10(subset[,12]))) # deposit log transformation # no transformation normalizes
-plot(density(log10(subset[,13]))) # cleaning fee no transformation normalizes
-
-plot(density(log10(subset[,15]))) # log number of reviews  somewhat better 
-plot(density(subset[,16]^40)) # review score rating # no transformation normalized
-plot(density(log10(subset[,18]))) # review per month 
-plot(density(log10(subset[,19]))) # price # somehow better
-
+# plot(density(subset[,12])) # deposit
+# plot(density(subset[,13])) # cleaning fee
+# plot(density(subset[,15])) # number of reviews
+# plot(density(subset[,16])) # review score rating
+# plot(density(subset[,18])) # review per month
+# plot(density(subset[,19])) # price 
+# 
+# # trial and error of transformations
+# plot(density(log10(subset[,12]))) # deposit log transformation # no transformation normalizes
+# plot(density(log10(subset[,13]))) # cleaning fee no transformation normalizes
+# 
+# plot(density(log10(subset[,15]))) # log number of reviews  somewhat better 
+# plot(density(subset[,16]^40)) # review score rating # no transformation normalized
+# plot(density(log10(subset[,18]))) # review per month 
+# plot(density(log10(subset[,19]))) # price # somehow better
 
 
 #----------------- Constant Errors ------------------#
@@ -251,3 +266,8 @@ ggplot(l_m, aes(x = hat_v, y = s_resid, size = cd)) +
   geom_point(aes(color = "coral" )) + theme_light() +
   ggtitle("Leverage vs. Studentized residuals") +
   labs(x = "Leverage", y = "Studentized Residuals", size = "Cook's Distance")
+
+
+b <- regsubsets(price ~., data=subset, nbest=1, nvmax=80, intercept=TRUE, 
+                method=c("forward"), really.big=TRUE)
+
