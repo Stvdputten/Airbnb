@@ -1,13 +1,14 @@
 ####----Libraries
-library(tidyverse)
-library(dplyr)
-library(ggplot2)
-library(car)
-library(leaps)
+# library(dplyr)
+# library(ggplot2)
+# library(car)
+# library(leaps)
+# library(tidyverse)
+# library(xtable)
 #########---------- Linear Models AIR BNB Analysis -------------#########
 
 
-bnb = read.csv(file="2019/listings.csv", header=TRUE, sep=",")
+# bnb = read.csv(file="listings.csv", header=TRUE, sep=",")
 
 # data inlcudes 106 variables, this is obvisouly too many as such variable 
 # selection based on literature/similar case studies will be performed and
@@ -82,58 +83,73 @@ bnb = read.csv(file="2019/listings.csv", header=TRUE, sep=",")
 # host_is_superhost[,29] coded true or false can be recoded 0,1
 
 # host_listing_count [,33] # potential need to recode, cannot sum
-# host_total_listings_count[,34] # potential need to recode, cannot sum
-# host_verifications [,35]
-# amenities[,59]
-
-
-# NA variables 
-sum(bnb$host_acceptance_rate == "N/A") # 20239
-sum(bnb$host_picture_url == "N/A") # 20239
-sum(bnb$host_total_listings_count == 0)
-sum(is.na(bnb$square_feet)) # 19873 # high missing values
-
-
-# Outcome variable 
-# price[,61](weeky_price[,62], monthly_price[,63])
-
-#########---------- Data Preperation & Examination -------------#########
-
-#----------create select subset of data & prepare for analysis 
-
-subs = as.data.frame(bnb[c(23:24,26,32,36:40,42:48,52:58,64:66,83:84,87:93,
-                           99,106,61)])
-
-# some preprocessing done in Precessing R file
-subset = read.csv('2019/subset.csv') %>% 
-  select(-X)
-
-colnames(subset) # variables review scores can be removed except review score rating
-# and number of review scores review score 
-# colnames(subset[18]) # review scorerating
-# colnames(subset[17]) # number_of_reviews
-
-# remove additonal variables
+# # host_total_listings_count[,34] # potential need to recode, cannot sum
+# # host_verifications [,35]
+# # amenities[,59]
+# 
+# 
+# # NA variables 
+# sum(bnb$host_acceptance_rate == "N/A") # 20239
+# sum(bnb$host_picture_url == "N/A") # 20239
+# sum(bnb$host_total_listings_count == 0 )
+# sum(is.na(bnb$square_feet)) # 19873 # high missing values
+# 
+# 
+# # Outcome variable 
+# # price[,61](weeky_price[,62], monthly_price[,63])
+# 
+# #########---------- Data Preperation & Examination -------------#########
+# 
+# #----------create select subset of data & prepare for analysis 
+# 
+# subs = as.data.frame(bnb[c(23:24,26,32,36:40,42:48,52:58,64:66,83:84,87:93,
+#                            99,106,61)])
+# 
+# # some preprocessing done in Precessing R file
+# subset = read.csv('2019/subset.csv')
+# 
+# colnames(subset) # variables review scores can be removed except review score rating
+# # and number of review scores review score 
+# colnames(subset[,19]) # review scorerating
+# colnames(subset[,17]) # number_of_reviews
+# 
+# # remove additonal variables
 # subset = subset[-c(1,3,18,20:25)]
-head(as_tibble(subset))
+# 
+# # some NA can be recoded into 0 e.g. security deposite & cancelation fee
+# subset$security_deposit[is.na(subset$security_deposit)] = 0 
+# subset$cleaning_fee[is.na(subset$cleaning_fee)] = 0 
+# 
+# # remove NA rows 
+# subset = na.omit(subset)
+# # save subset as csv
+# write.csv(subset, '2019/subset.csv')
+# 
 
-# some NA can be recoded into 0 e.g. security deposite & cancelation fee
-subset$security_deposit[is.na(subset$security_deposit)] = 0 
-subset$cleaning_fee[is.na(subset$cleaning_fee)] = 0 
+#########--- START SCRIPT FROM HERE ---####################
+library(dplyr)
+library(ggplot2)
+library(car)
+library(leaps)
+library(tidyverse)
+library(xtable)
 
-# remove NA rows 
-subset = na.omit(subset)
-# save subset as csv
-write.csv(subset, '2019/subset.csv')
+subset = read_csv("2019/subset.csv")
+colnames(subset)
 
 # change class of variables for analysis 
-subset$accommodates = as.factor(subset$accommodates) # accomodates
-subset$bathrooms = as.factor(subset$bathrooms) # bathrooms
-subset$bedrooms = as.factor(subset$bedrooms) # bedrooms
-subset$beds = as.factor(subset$beds) # bedrooms
-subset$guests_included = as.factor(subset$guests_included) # guest included
-
-
+# subset$host_response_time <- as_factor(subset$host_response_time)
+# subset$cancellation_policy <- as_factor(subset$cancellation_policy)
+# subset$room_type <- as_factor(subset$room_type)
+# subset$bed_type <- as_factor(subset$bed_type)
+# subset$beds <- as_factor(subset$beds)
+# subset$property_type <- as_factor(subset$property_type)
+# subset$neighbourhood_cleansed <- as_factor(subset$neighbourhood_cleansed)
+# subset$security_deposit <- as.numeric(gsub('\\$', '', subset$security_deposit))
+# subset$cleaning_fee <- as.numeric(gsub('\\$', '', subset$cleaning_fee))
+# subset$bathrooms <- as_factor(subset$bathrooms)
+# subset$accommodates <- as_factor(subset$accommodates)
+# subset$guests_included <- as_factor(subset$guests_included)
 
 
 # number of variables in dataset
@@ -142,17 +158,33 @@ colnames(subset)
 
 
 #########---------- Regression Assumptions -------------#########
+#-------Collinearity: Independence --------#
+# variance Inflation Factor
+var_inf = vif(lm(price ~ ., subset)) # number of vifs exceed treshold value, 
+# as such there is collinearity present between predictor sets
+# predictors can be removed and analysis should be re-run determine if still present
+summary(var_inf)
+var_inf
+xtable(var_inf)
+# remove variable with highest VIF = beds
+subset = subset[-9]
+#rerun vif
+var_inf2 = vif(lm(price ~ ., subset))
+var_inf2 # no VIF above 10, now its ok collinearity contained
+xtable(var_inf2)
+#-------- Linear Model ---------#
 x = model.matrix(price ~ ., subset)
-x_2 = subset 
-x_2 = as.data.frame(x_2)
-x_2 = model.matrix(price ~ ., x_2)
 l_m = lm(price ~ x, subset)
-l_m_2 = lm(log10(price + 1) ~ x, subset)
+l_m_2 = lm(log10(price) ~ x, subset)
+l_m_f = l_m$fitted.values
+l_m_f_2 = l_m_2$fitted.values
+
 #----------------- Nomal Errors ------------------#
 l_m_res = as.data.frame(l_m$residuals)
 l_m_res_2 = as.data.frame(l_m_2$residuals)
 
 l_m_res = as.data.frame(l_m$residuals)
+
 ggplot(l_m_res, aes(sample = l_m_res$`l_m$residuals`)) + stat_qq() +
   ggtitle("Quantile comparison plot Errors") + theme_light() +
   labs(x= "Theoretical Quantiles", y= "Error Quantiles") + stat_qq_line()
@@ -187,16 +219,20 @@ plot(density(l_m_res_2$`l_m_2$residuals`))
 
 #----------------- Constant Errors ------------------#
 
-plot(subset$price,l_m_res$`l_m$residuals`, main="Residual plot")
+plot(l_m_f,l_m_res$`l_m$residuals`, main="Residual plot")
 
-ggplot(subset,aes(subset$price,
-                 l_m_res$`l_m$residuals`)) +
+plot(l_m_f_2,l_m_res_2$`l_m_2$residuals`, main="Residual plot")
+
+ggplot(subset,aes(l_m_f,
+                  l_m_res$`l_m$residuals`)) +
   geom_point() + theme_light() + labs(x= "Price", y= "Residuals") +
   geom_smooth(method= "loess", se=FALSE) + ggtitle("Residual plot")
 
-ggplot(subset,aes(subset$price,
-                 l_m_res_2$`l_m_2$residuals`)) + geom_point() + theme_light() + labs(x= "Price", y= "Residuals") +
+ggplot(subset,aes(l_m_f_2,
+                  l_m_res_2$`l_m_2$residuals`)) +
+  geom_point() + theme_light() + labs(x= "Price", y= "Residuals") +
   geom_smooth(method= "loess", se=FALSE) + ggtitle("Residual plot")
+
 # Rule of Thumb for non-constant error variance
 # if ratio of smallest vs biggest residual is bigger than 10 or 4 its a problem
 abs(max(l_m$residuals)) / abs(min(l_m$residuals)) < 10
@@ -204,7 +240,7 @@ abs(max(l_m$residuals)) / abs(min(l_m$residuals)) < 4
 
 
 #----------------- Linearity ------------------#
-lin_c = as.data.frame(subset[c(1:19)])
+lin_c = as.data.frame(subset[c(1:17)])
 colnames(lin_c)
 
 # Save variables sepeartely for Component + Residual plot
@@ -217,7 +253,6 @@ room_type = lin_c$room_type
 accommodates = lin_c$accommodates
 bathrooms = lin_c$bathrooms
 bedrooms = lin_c$bedrooms
-beds = lin_c$beds 
 bed_type = lin_c$bed_type
 security_deposit = lin_c$security_deposit
 cleaning_fee = lin_c$cleaning_fee
@@ -228,53 +263,59 @@ cancellation_policy = lin_c$cancellation_policy
 reviews_per_month = as.integer(lin_c$reviews_per_month)
 
 # same lm model as before, but lets make sure its here
-l_m = lm(price ~ ., lin_c)
-
+l_c = lm(price ~ ., lin_c)
 
 # Component + Residual plot to examine the relationship between Y and each X 
 # individually. CoPlots show the  partial relationship of Y and X 
 # controlling for other Xs.
-crPlot(l_m, host_response_time)
-crPlot(l_m, host_has_profile_pic)
-crPlot(l_m, host_identity_verified)
-crPlot(l_m, neighbourhood_cleansed)
-crPlot(l_m, property_type)
-crPlot(l_m, room_type)
-crPlot(l_m, accommodates)
-crPlot(l_m, bathrooms)
-crPlot(l_m, beds)
-crPlot(l_m, bed_type)
-crPlot(l_m, security_deposit)
-crPlot(l_m, cleaning_fee)
-crPlot(l_m, guests_included)
-crPlot(l_m, number_of_reviews)
-crPlot(l_m, cleaning_fee)
-crPlot(l_m, review_scores_rating)
-crPlot(l_m, cancellation_policy)
-crPlot(l_m, reviews_per_month)
+crPlot(l_c, host_response_time)
+crPlot(l_c, host_identity_verified)
+crPlot(l_c, neighbourhood_cleansed)
+crPlot(l_c, property_type)
+crPlot(l_c, room_type)
+crPlot(l_c, accommodates)
+crPlot(l_c, bathrooms)
+crPlot(l_c, beds)
+crPlot(l_c, bed_type)
+crPlot(l_c, security_deposit)
+crPlot(l_c, cleaning_fee)
+crPlot(l_c, guests_included)
+crPlot(l_c, number_of_reviews)
+crPlot(l_c, cleaning_fee)
+crPlot(l_c, review_scores_rating)
+crPlot(l_c, cancellation_policy)
+crPlot(l_c, reviews_per_month)
+
+
+lin_c2 = lin_c
+lin_c2$cleaning_fee = sqrt(lin_c2$cleaning_fee)
+lin_c2$reviews_per_month = sqrt(lin_c2$reviews_per_month)
+
+l_c2 = lm(price ~ ., lin_c2)
+crPlot(l_c2, reviews_per_month)
+crPlot(l_c2, cleaning_fee)
 
 
 #----------------- Influential Cases ------------------#
-# variance Inflation Factor
-vif(l_m) # all vifs are small, no collinearity between predictors 
-# but potential to reduce predictors to an optimal subset of predictors 
-# using subset selection 
 
 #---------- Hat-Values 
 hat_v = hatvalues(l_m)
+hat_v2 = hatvalues(l_m_2)
 #---------- studentized Residuals
 s_resid = rstudent(l_m)
+s_resid2 = rstudent(l_m_2)
 #---------- Cook's Residuals --------#
 cd = as.vector(cooks.distance(l_m))
-cooks.distance(l_m)
-
+cd2 = as.vector(cooks.distance(l_m_2))
+xtable(var_inf)
 # bubble plot of laverage vs discrepancy 
 ggplot(l_m, aes(x = hat_v, y = s_resid, size = cd)) +
-  geom_point(aes(color = "coral" )) + theme_light() +
-  ggtitle("Leverage vs. Studentized residuals") +
+  geom_point(aes(color = )) + theme_light() +
+  ggtitle("Leverage vs. Studentized residuals No Trasnformation") +
   labs(x = "Leverage", y = "Studentized Residuals", size = "Cook's Distance")
 
-
-b <- regsubsets(price ~., data=subset, nbest=1, nvmax=80, intercept=TRUE, 
-                method=c("forward"), really.big=TRUE)
-
+ggplot(l_m_2, aes(x = hat_v2, y = s_resid2, size = cd2)) +
+  geom_point(aes(color =  )) + theme_light() +
+  ggtitle("Leverage vs. Studentized residuals Trasnformed") +
+  labs(x = "Leverage", y = "Studentized Residuals", 
+       size = "Cook's Distance")
